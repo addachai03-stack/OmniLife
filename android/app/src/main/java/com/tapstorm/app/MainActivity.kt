@@ -34,14 +34,14 @@ class MainActivity : Activity() {
         })
         packageInput = EditText(this).apply {
             hint = "Target app package name"
-            singleLine = true
+            isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT
             setText(prefs.getString("target_package", ""))
         }
         layout.addView(packageInput)
         intervalInput = EditText(this).apply {
             hint = "Interval in seconds (10–300)"
-            singleLine = true
+            isSingleLine = true
             inputType = InputType.TYPE_CLASS_NUMBER
             setText(prefs.getLong("interval_seconds", 30L).toString())
         }
