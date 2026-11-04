@@ -12,8 +12,7 @@ android {
         versionCode 2
         versionName '0.2.0'
     }
-    // Keep both legacy JAR (v1) and modern APK (v2) signatures enabled.
-    // This improves compatibility with OEM Android package installers.
+    // Both v1 and v2 are explicitly enabled for OEM installer compatibility.
     signingConfigs {
         debug {
             enableV1Signing true
