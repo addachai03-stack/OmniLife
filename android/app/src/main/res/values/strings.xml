@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TAPSTORM</string>
+    <string name="tapstorm_accessibility_description">TAPSTORM checks only the selected foreground app and clicks a control labelled exactly Search at your chosen interval. Screen content is not transmitted.</string>
 </resources>
