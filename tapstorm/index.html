@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080b14">
+<meta name="description" content="TAPSTORM interval dashboard">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+<title>TAPSTORM</title>
+</head>
+<body>
+<main class="shell">
+<header><div class="mark">TS</div><div><p class="eyebrow">CONTROL DECK</p><h1>TAPSTORM</h1></div><span class="status">LOCAL</span></header>
+<section class="hero glass">
+<p class="eyebrow">INTERVAL ENGINE</p><div class="timer" id="timer">00:00</div><p class="muted" id="state">Ready when you are</p>
+<div class="actions"><button id="start" class="primary">Start timer</button><button id="stop" class="secondary" disabled>Stop</button></div>
+</section>
+<section class="glass settings">
+<div class="section-head"><div><p class="eyebrow">CONFIGURATION</p><h2>Refresh interval</h2></div><span class="pill">CUSTOM</span></div>
+<label for="interval">Repeat every (seconds)</label>
+<div class="input-row"><input id="interval" type="number" min="5" max="3600" value="30" inputmode="numeric"><span>SEC</span></div>
+<p class="hint">Timer preview only. This PWA cannot click buttons in another app.</p>
+</section>
+<section class="notice"><strong>Safety first</strong><p>TAPSTORM currently runs a visible timer only. No payment actions, hidden clicks, or background control.</p></section>
+<footer>Built for clear, user-controlled sessions.</footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
