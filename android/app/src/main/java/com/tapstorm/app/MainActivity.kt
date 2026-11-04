@@ -217,8 +217,6 @@ class MainActivity : Activity() {
         if (value == null || value !in 5L..3600L) {
             Toast.makeText(this, "5 se 3600 seconds set karo", Toast.LENGTH_LONG).show(); return
         }
-        intervalSeconds = value; prefs.edit().putLong("interval_seconds", value).apply()
-        remainingSeconds = intervalSeconds; running = true; startButton.isEnabled = false
         if (selectedPackage == null) {
             Toast.makeText(this, "Pehle Airtel Merchant select karo", Toast.LENGTH_LONG).show(); return
         }
@@ -226,6 +224,8 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Settings mein TAPSTORM Accessibility enable karo, phir Start dabao", Toast.LENGTH_LONG).show()
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); return
         }
+        intervalSeconds = value; prefs.edit().putLong("interval_seconds", value).apply()
+        remainingSeconds = intervalSeconds; running = true; startButton.isEnabled = false
         prefs.edit().putBoolean("auto_click_enabled", true).apply()
         status.text = "⚡ Auto-click ON • " + prefs.getString("selected_app_name", selectedPackage) + " foreground mein rakho"
         countdown.text = formatTime(remainingSeconds); handler.removeCallbacks(ticker); handler.postDelayed(ticker, 1000L)
