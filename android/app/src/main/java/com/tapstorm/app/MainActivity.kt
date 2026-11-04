@@ -9,6 +9,8 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
+import android.text.TextUtils
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -39,9 +41,7 @@ class MainActivity : Activity() {
             if (!running) return
             remainingSeconds--
             if (remainingSeconds <= 0L) {
-                status.text = "⏰ Reminder! Selected app kholo aur refresh manually karo."
-                Toast.makeText(this@MainActivity, "TAPSTORM: App open karke refresh manually karo", Toast.LENGTH_LONG).show()
-                vibrate()
+                status.text = "⚡ Auto-click active • Selected app foreground mein hona chahiye"
                 remainingSeconds = intervalSeconds
             }
             countdown.text = formatTime(remainingSeconds)
@@ -94,6 +94,12 @@ class MainActivity : Activity() {
             }
         }
         appPanel.addView(remove, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(8) })
+        val accessibilityButton = Button(this).apply {
+            text = "⚡ ENABLE AUTO-CLICK ACCESS"
+            setTextColor(Color.WHITE); background = rounded(Color.rgb(205, 105, 0), 16)
+            setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+        }
+        appPanel.addView(accessibilityButton, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) })
         content.addView(appPanel)
         updateSelectedApp()
 
@@ -138,7 +144,7 @@ class MainActivity : Activity() {
         live.addView(status)
         content.addView(live)
         startButton = Button(this).apply {
-            text = "▶  START REMINDER"; textSize = 18f; setTextColor(Color.WHITE); background = rounded(Color.rgb(0, 180, 75), 28)
+            text = "▶  START AUTO-CLICK"; textSize = 18f; setTextColor(Color.WHITE); background = rounded(Color.rgb(0, 180, 75), 28)
             setOnClickListener { startReminder() }
         }
         content.addView(startButton, LinearLayout.LayoutParams(-1, dp(62)).apply { topMargin = dp(8) })
@@ -149,9 +155,9 @@ class MainActivity : Activity() {
         content.addView(stop, LinearLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(10) })
         val note = panel()
         note.addView(label("IMPORTANT", 15f, Color.rgb(255, 196, 45), true))
-        note.addView(label("Selected app ko TAPSTORM se launch kiya ja sakta hai. App select karna full integration nahi hai; doosre app ke Search button ko TAPSTORM automatically press nahi karta. Refresh aapko manually karna hoga.", 14f, Color.LTGRAY, false))
+        note.addView(label("Auto-click sirf selected app foreground mein hone par exact Search button ko interval par click karega. Accessibility permission zaroori hai. App background/closed ho to click nahi hoga. STOP dabane par auto-click band ho jayega.", 14f, Color.LTGRAY, false))
         content.addView(note)
-        content.addView(label("TAPSTORM  •  v0.4.0", 12f, Color.GRAY, true).apply { gravity = Gravity.CENTER; setPadding(0, dp(18), 0, 0) })
+        content.addView(label("TAPSTORM  •  v0.5.0", 12f, Color.GRAY, true).apply { gravity = Gravity.CENTER; setPadding(0, dp(18), 0, 0) })
         setContentView(scroll)
     }
 
@@ -213,13 +219,28 @@ class MainActivity : Activity() {
         }
         intervalSeconds = value; prefs.edit().putLong("interval_seconds", value).apply()
         remainingSeconds = intervalSeconds; running = true; startButton.isEnabled = false
-        status.text = "Reminder running • Selected app manually open/refresh karo"
+        if (selectedPackage == null) {
+            Toast.makeText(this, "Pehle Airtel Merchant select karo", Toast.LENGTH_LONG).show(); return
+        }
+        if (!isClickServiceEnabled()) {
+            Toast.makeText(this, "Settings mein TAPSTORM Accessibility enable karo, phir Start dabao", Toast.LENGTH_LONG).show()
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); return
+        }
+        prefs.edit().putBoolean("auto_click_enabled", true).apply()
+        status.text = "⚡ Auto-click ON • " + prefs.getString("selected_app_name", selectedPackage) + " foreground mein rakho"
         countdown.text = formatTime(remainingSeconds); handler.removeCallbacks(ticker); handler.postDelayed(ticker, 1000L)
     }
 
     private fun stopReminder() {
         running = false; handler.removeCallbacks(ticker); remainingSeconds = intervalSeconds
-        countdown.text = formatTime(remainingSeconds); status.text = "Reminder stopped."; startButton.isEnabled = true
+        prefs.edit().putBoolean("auto_click_enabled", false).apply()
+        countdown.text = formatTime(remainingSeconds); status.text = "Auto-click stopped."; startButton.isEnabled = true
+    }
+
+    private fun isClickServiceEnabled(): Boolean {
+        val expected = packageName + "/" + TapstormClickService::class.java.name
+        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+        return !TextUtils.isEmpty(enabled) && enabled!!.split(':').any { it.equals(expected, ignoreCase = true) }
     }
 
     private fun vibrate() {
