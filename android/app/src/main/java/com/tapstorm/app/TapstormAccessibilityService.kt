@@ -66,7 +66,8 @@ class TapstormAccessibilityService : AccessibilityService() {
                 clickCount = 0
                 active = true
                 handler.postDelayed(runner, intervalMs)
-            } else if (newClass != observedWindowClass) {
+            } else {
+                // Any subsequent window-state event may indicate a dialog or screen transition.
                 stopSession()
             }
         }
