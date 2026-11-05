@@ -1,0 +1,86 @@
+name: TAPSTORM signed release APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tapstorm-starter
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Validate and prepare private signing key
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.TAPSTORM_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.TAPSTORM_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TAPSTORM_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.TAPSTORM_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub Actions secret for $name. Add the four TAPSTORM signing secrets in repository Settings > Secrets and variables > Actions."
+              exit 1
+            fi
+          done
+          KEYSTORE_PATH="$RUNNER_TEMP/tapstorm-release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+          echo "TAPSTORM_RELEASE_STORE_FILE=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "TAPSTORM_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "TAPSTORM_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "TAPSTORM_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Locate Android SDK and install packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$(find "$SDK_ROOT" -type f -name sdkmanager -print -quit 2>/dev/null)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::Android sdkmanager was not found."
+            exit 1
+          fi
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses || true
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build signed release APK
+        run: gradle -p android assembleRelease
+
+      - name: Verify release signature, alignment and package
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          TOOLS="$SDK_ROOT/build-tools/35.0.0"
+          test -s "$APK"
+          "$TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/tapstorm-signature.txt"
+          grep -q "Verified using v2 scheme (APK Signature Scheme v2): true" "$RUNNER_TEMP/tapstorm-signature.txt"
+          "$TOOLS/zipalign" -c -v 4 "$APK"
+          "$TOOLS/aapt" dump badging "$APK" | head -n 8
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TAPSTORM-signed-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
