@@ -49,7 +49,7 @@ jobs:
           fi
           "$APKSIGNER" sign --ks "$KEYSTORE" --ks-key-alias androiddebugkey \
             --ks-pass pass:android --key-pass pass:android \
-            --v1-signing-enabled true --v2-signing-enabled true \
+            --min-sdk-version 23 --v1-signing-enabled true --v2-signing-enabled true \
             --out "$APK.resigned" "$APK"
           mv "$APK.resigned" "$APK"
       - name: Verify APK signatures, alignment and package metadata
@@ -59,7 +59,9 @@ jobs:
           SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           TOOLS="$SDK_ROOT/build-tools/35.0.0"
           test -s "$APK"
-          "$TOOLS/apksigner" verify --verbose --print-certs "$APK"
+          "$TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee /tmp/apk-signature-check.txt
+          grep -q "Verified using v1 scheme (JAR signing): true" /tmp/apk-signature-check.txt
+          grep -q "Verified using v2 scheme (APK Signature Scheme v2): true" /tmp/apk-signature-check.txt
           "$TOOLS/zipalign" -c -v 4 "$APK"
           "$TOOLS/aapt" dump badging "$APK" | head -n 8
       - uses: actions/upload-artifact@v4
