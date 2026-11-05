@@ -158,7 +158,7 @@ class MainActivity : Activity() {
         note.addView(label("IMPORTANT", 15f, Color.rgb(255, 196, 45), true))
         note.addView(label("Auto-click sirf selected app foreground mein hone par exact Search button ko interval par click karega. Accessibility permission zaroori hai. App background/closed ho to click nahi hoga. STOP dabane par auto-click band ho jayega.", 14f, Color.LTGRAY, false))
         content.addView(note)
-        content.addView(label("TAPSTORM  •  v0.5.0", 12f, Color.GRAY, true).apply { gravity = Gravity.CENTER; setPadding(0, dp(18), 0, 0) })
+        content.addView(label("TAPSTORM  •  v0.6.0", 12f, Color.GRAY, true).apply { gravity = Gravity.CENTER; setPadding(0, dp(18), 0, 0) })
         setContentView(scroll)
         if (prefs.getBoolean("auto_click_enabled", false)) {
             running = true
