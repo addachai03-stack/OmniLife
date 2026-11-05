@@ -33,28 +33,10 @@ jobs:
           gradle-version: "8.9"
       - name: Build debug APK
         run: gradle -p android assembleDebug
-      - name: Re-sign APK with V1 and V2 compatibility
-        shell: bash
-        run: |
-          set -euo pipefail
-          APK="android/app/build/outputs/apk/debug/app-debug.apk"
-          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          APKSIGNER="$SDK_ROOT/build-tools/35.0.0/apksigner"
-          KEYSTORE="$HOME/.android/debug.keystore"
-          mkdir -p "$HOME/.android"
-          if [ ! -f "$KEYSTORE" ]; then
-            keytool -genkeypair -v -keystore "$KEYSTORE" -storepass android -keypass android \
-              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
-          "$APKSIGNER" sign --ks "$KEYSTORE" --ks-key-alias androiddebugkey \
-            --ks-pass pass:android --key-pass pass:android \
-            --min-sdk-version 23 --v1-signing-enabled true --v2-signing-enabled true \
-            --out "$APK.resigned" "$APK"
-          mv "$APK.resigned" "$APK"
       - name: Verify APK signatures, alignment and package metadata
         shell: bash
         run: |
+          set -euo pipefail
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
           SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           TOOLS="$SDK_ROOT/build-tools/35.0.0"
