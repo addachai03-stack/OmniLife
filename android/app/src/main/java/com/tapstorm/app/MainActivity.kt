@@ -39,12 +39,13 @@ class MainActivity : Activity() {
     private val ticker = object : Runnable {
         override fun run() {
             if (!running) return
-            remainingSeconds--
-            if (remainingSeconds <= 0L) {
-                status.text = "⚡ Auto-click active • Selected app foreground mein hona chahiye"
-                remainingSeconds = intervalSeconds
-            }
+            val nextAt = prefs.getLong("next_click_at", System.currentTimeMillis() + intervalSeconds * 1000L)
+            val leftMillis = (nextAt - System.currentTimeMillis()).coerceAtLeast(0L)
+            remainingSeconds = (leftMillis + 999L) / 1000L
             countdown.text = formatTime(remainingSeconds)
+            val result = prefs.getString("last_click_result", null)
+            if (remainingSeconds == 0L) status.text = "Checking selected app…"
+            else if (!result.isNullOrBlank()) status.text = result
             if (running) handler.postDelayed(this, 1000L)
         }
     }
@@ -159,6 +160,15 @@ class MainActivity : Activity() {
         content.addView(note)
         content.addView(label("TAPSTORM  •  v0.5.0", 12f, Color.GRAY, true).apply { gravity = Gravity.CENTER; setPadding(0, dp(18), 0, 0) })
         setContentView(scroll)
+        if (prefs.getBoolean("auto_click_enabled", false)) {
+            running = true
+            startButton.isEnabled = false
+            if (prefs.getLong("next_click_at", 0L) == 0L) {
+                prefs.edit().putLong("next_click_at", System.currentTimeMillis() + intervalSeconds * 1000L).apply()
+            }
+            status.text = "⚡ Auto-click ON • Selected app foreground mein rakho"
+            handler.post(ticker)
+        }
     }
 
     private fun showAppPicker() {
@@ -208,8 +218,10 @@ class MainActivity : Activity() {
         intervalSeconds = value.coerceIn(5L, 3600L); remainingSeconds = intervalSeconds
         prefs.edit().putLong("interval_seconds", intervalSeconds).apply()
         countdown.text = formatTime(remainingSeconds); status.text = "Interval set: $intervalSeconds seconds"
-        if (running) handler.removeCallbacks(ticker)
-        running = false; startButton.isEnabled = true
+        handler.removeCallbacks(ticker)
+        running = false
+        prefs.edit().putBoolean("auto_click_enabled", false).remove("next_click_at").apply()
+        startButton.isEnabled = true
     }
 
     private fun startReminder() {
@@ -226,14 +238,18 @@ class MainActivity : Activity() {
         }
         intervalSeconds = value; prefs.edit().putLong("interval_seconds", value).apply()
         remainingSeconds = intervalSeconds; running = true; startButton.isEnabled = false
-        prefs.edit().putBoolean("auto_click_enabled", true).apply()
+        prefs.edit()
+            .putBoolean("auto_click_enabled", true)
+            .putLong("next_click_at", System.currentTimeMillis() + intervalSeconds * 1000L)
+            .remove("last_click_result")
+            .apply()
         status.text = "⚡ Auto-click ON • " + prefs.getString("selected_app_name", selectedPackage) + " foreground mein rakho"
         countdown.text = formatTime(remainingSeconds); handler.removeCallbacks(ticker); handler.postDelayed(ticker, 1000L)
     }
 
     private fun stopReminder() {
         running = false; handler.removeCallbacks(ticker); remainingSeconds = intervalSeconds
-        prefs.edit().putBoolean("auto_click_enabled", false).apply()
+        prefs.edit().putBoolean("auto_click_enabled", false).remove("next_click_at").apply()
         countdown.text = formatTime(remainingSeconds); status.text = "Auto-click stopped."; startButton.isEnabled = true
     }
 
