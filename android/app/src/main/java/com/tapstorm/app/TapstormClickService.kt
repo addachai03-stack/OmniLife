@@ -12,17 +12,41 @@ class TapstormClickService : AccessibilityService() {
     private val clickLoop = object : Runnable {
         override fun run() {
             val prefs = getSharedPreferences("tapstorm_timer", MODE_PRIVATE)
-            if (prefs.getBoolean("auto_click_enabled", false)) {
+            if (!prefs.getBoolean("auto_click_enabled", false)) {
+                handler.postDelayed(this, 1000L)
+                return
+            }
+
+            val now = System.currentTimeMillis()
+            val interval = prefs.getLong("interval_seconds", 10L).coerceIn(5L, 3600L)
+            var nextAt = prefs.getLong("next_click_at", 0L)
+            if (nextAt == 0L) {
+                nextAt = now + interval * 1000L
+                prefs.edit().putLong("next_click_at", nextAt).apply()
+            }
+
+            if (now >= nextAt) {
                 val target = prefs.getString("selected_package", null)
                 val root = rootInActiveWindow
-                if (target != null && root?.packageName?.toString() == target) {
-                    findSearchButton(root)?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                val result = when {
+                    target.isNullOrBlank() -> "No target app selected — auto-click skipped"
+                    root?.packageName?.toString() != target -> "Waiting: selected app is not in foreground"
+                    else -> {
+                        val searchButton = findSearchButton(root)
+                        if (searchButton != null && searchButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                            "✓ Search clicked in selected app"
+                        } else {
+                            "Search button not found/clickable — skipped"
+                        }
+                    }
                 }
-                val seconds = prefs.getLong("interval_seconds", 10L).coerceIn(5L, 3600L)
-                handler.postDelayed(this, seconds * 1000L)
-            } else {
-                handler.postDelayed(this, 1000L)
+                nextAt = now + interval * 1000L
+                prefs.edit()
+                    .putLong("next_click_at", nextAt)
+                    .putString("last_click_result", result)
+                    .apply()
             }
+            handler.postDelayed(this, 500L)
         }
     }
 
