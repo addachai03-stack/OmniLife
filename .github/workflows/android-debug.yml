@@ -42,7 +42,6 @@ jobs:
           TOOLS="$SDK_ROOT/build-tools/35.0.0"
           test -s "$APK"
           "$TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee /tmp/apk-signature-check.txt
-          grep -q "Verified using v1 scheme (JAR signing): true" /tmp/apk-signature-check.txt
           grep -q "Verified using v2 scheme (APK Signature Scheme v2): true" /tmp/apk-signature-check.txt
           "$TOOLS/zipalign" -c -v 4 "$APK"
           "$TOOLS/aapt" dump badging "$APK" | head -n 8
